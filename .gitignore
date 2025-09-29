@@ -1,8 +1,19 @@
-# Terraform
-terraform/.terraform/
-terraform/.terraform.lock.hcl
-terraform/terraform.tfstate
-terraform/terraform.tfstate.backup
-terraform/terraform.tfvars
-backend/node_modules
-frontend/node_modules
+# Node dependencies
+/node_modules
+/frontend/node_modules
+/backend/node_modules
+
+# Environment variables (NEVER commit secrets!)
+.env
+frontend/.env
+backend/.env
+
+# Terraform state and secrets (CRITICAL)
+# These files contain sensitive information about your infrastructure.
+/terraform/.terraform/
+/terraform/terraform.tfstate
+/terraform/terraform.tfstate.backup
+
+# Log files
+npm-debug.log
+```
