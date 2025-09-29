@@ -1,75 +1,83 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
+// 1. Create the context object. This will be our global "state container".
 const AuthContext = createContext(null);
 
+// 2. Create the AuthProvider component. This component will wrap our entire application.
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  // We remove the token state because our simple backend doesn't use it yet
-  // const [token, setToken] = useState(null); 
   const [loading, setLoading] = useState(true);
 
+  // This effect runs once when the app starts. It checks if we have a user
+  // saved in the browser's localStorage from a previous session for persistence.
   useEffect(() => {
-    const savedUser = localStorage.getItem('auth_user');
-    // We remove the token logic from here as well
-    // const savedToken = localStorage.getItem('auth_token');
-    if (savedUser) setUser(JSON.parse(savedUser));
-    // if (savedToken) setToken(savedToken);
-    setLoading(false);
+    try {
+      const savedUser = localStorage.getItem('mern_user');
+      if (savedUser) {
+        setUser(JSON.parse(savedUser));
+      }
+    } catch (error) {
+      console.error("Failed to parse user from localStorage", error);
+      localStorage.removeItem('mern_user');
+    }
+    setLoading(false); // Finished loading the initial user state.
   }, []);
+
+  // --- API Functions ---
 
   const login = async (email, password) => {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
     const res = await fetch(`${apiUrl}/api/users/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email, password }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Login failed');
-    
+    if (!res.ok) {
+      throw new Error(data.message || 'Login failed');
+    }
     setUser(data.user);
-    localStorage.setItem('auth_user', JSON.stringify(data.user));
-    // We remove the token logic from here
-    // setToken(data.token);
-    // localStorage.setItem('auth_token', data.token);
+    localStorage.setItem('mern_user', JSON.stringify(data.user));
   };
 
   const signup = async (name, email, password) => {
-    const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/signup`, {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const res = await fetch(`${apiUrl}/api/users/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password })
+      body: JSON.stringify({ name, email, password }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Signup failed');
-    
+    if (!res.ok) {
+      throw new Error(data.message || 'Signup failed');
+    }
     setUser(data.user);
-    localStorage.setItem('auth_user', JSON.stringify(data.user));
-    // We remove the token logic from here
-    // setToken(data.token);
-    // localStorage.setItem('auth_token', data.token);
+    localStorage.setItem('mern_user', JSON.stringify(data.user));
   };
 
   const logout = () => {
     setUser(null);
-    // setToken(null);
-    localStorage.removeItem('auth_user');
-    // localStorage.removeItem('auth_token');
-  };
-  
-  // This function is for authenticated requests, which we can leave for now
-  const authFetch = async (input, init = {}) => {
-    return fetch(input, { ...init });
+    localStorage.removeItem('mern_user');
   };
 
-  // We remove 'token' from the value passed to the context
-  const value = { user, login, signup, logout, authFetch };
-  if (loading) return null;
+  // 3. Provide the user state and functions to all child components.
+  const value = { user, login, signup, logout };
+
+  // Don't render the app until we've checked for a saved user.
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// 4. Create a custom hook for easy access to the context.
+// Any component can now call `useAuth()` to get the user and login/logout functions.
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 }
+
